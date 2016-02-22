@@ -1,0 +1,38 @@
+package TRUESMS.SMSLOAD
+
+import scala.concurrent.duration._
+
+import io.gatling.core.Predef._
+import io.gatling.http.Predef._
+import io.gatling.jdbc.Predef._
+
+class URLINTERNAL extends Simulation {
+
+	val httpProtocol = http
+		.baseURL("http://127.0.0.1")
+		.inferHtmlResources(BlackList(""".*\.js""", """.*\.css""", """.*\.gif""", """.*\.jpeg""", """.*\.jpg""", """.*\.ico""", """.*\.woff""", """.*\.(t|o)tf""", """.*\.png"""), WhiteList())
+
+	val headers_0 = Map("Upgrade-Insecure-Requests" -> "1")
+
+    val uri1 = "127.0.0.1"
+
+	val scn = scenario("URLINTERNAL")
+		.exec(http("SendSMS")
+			.get("/pushMT.php")
+			.headers(headers_0)
+			.check(status.is(200))
+			//Check message ID strlen = 17 
+			.check(regex("\"([0-9]{17})\"").saveAs("Messageid"))
+			//Check Status send SMS 000=Success , if not found "000" will show warning and mean is SMS not send successful.
+			.check(regex("000").saveAs("Statusid")))
+			.pause(1)
+
+		 /* Check C_MAIN_REF */
+        .exec { session =>
+          println(session("Messageid"))
+         session
+        }	
+
+	//setUp(scn.inject(atOnceUsers(10))).protocols(httpProtocol)
+	setUp(scn.inject(rampUsers(3) over (1 seconds))).protocols(httpProtocol)
+}
